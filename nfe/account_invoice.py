@@ -18,25 +18,41 @@
 ###############################################################################
 
 import os
+import pysped
+import logging
 import datetime
 from openerp.osv import orm
+from StringIO import StringIO
 from openerp.tools.translate import _
-from .sped.nfe.document import NFe200
-from .sped.nfe.document import NFe310
-from .sped.nfe.validator.config_check import validate_nfe_configuration, validate_invoice_cancel
-from .sped.nfe.processing.xml import monta_caminho_nfe
-from .sped.nfe.processing.xml import send, cancel
-
 from .sped.nfe.nfe_factory import NfeFactory
 from .sped.nfe.validator.xml import XMLValidator
+from openerp.report.pyPdf import PdfFileReader, PdfFileWriter
+from openerp.addons.nfe.sped.nfe.processing.xml import send, cancel
+from openerp.addons.nfe.sped.nfe.processing.xml import monta_caminho_nfe
+from openerp.addons.nfe.sped.nfe.validator.config_check import validate_nfe_configuration, validate_invoice_cancel
 
+_logger = logging.getLogger(__name__)
 
 class AccountInvoice(orm.Model):
     """account_invoice overwritten methods"""
     _inherit = 'account.invoice'
 
-    def _get_nfe_factory(self, company):
-        return NfeFactory().get_nfe(company)
+    def attach_file_event(self, cr, uid, ids, seq, att_type, ext, context):
+        """
+        Implemente esse metodo na sua classe de manipulação de arquivos
+        :param cr:
+        :param uid:
+        :param ids:
+        :param seq:
+        :param att_type:
+        :param ext:
+        :param context:
+        :return:
+        """
+        return False
+
+    def _get_nfe_factory(self, nfe_version):
+        return NfeFactory().get_nfe(nfe_version)
 
     def nfe_export(self, cr, uid, ids, context=None):
 
@@ -47,12 +63,7 @@ class AccountInvoice(orm.Model):
 
             validate_nfe_configuration(company)
 
-            # if company.nfe_version == '3.10':
-            #     nfe_obj = NFe310()
-            # else:
-            #     nfe_obj = NFe200()
-
-            nfe_obj = self._get_nfe_factory(company)
+            nfe_obj = self._get_nfe_factory(inv.nfe_version)
 
             # nfe_obj = NFe310()
             nfes = nfe_obj.get_xml(cr, uid, ids, int(company.nfe_environment))
@@ -102,25 +113,12 @@ class AccountInvoice(orm.Model):
 
             company_pool = self.pool.get('res.company')
             company = company_pool.browse(cr, uid, inv.company_id.id)
-
             event_obj = self.pool.get('l10n_br_account.document_event')
-
             event  = max(event_obj.search(cr, uid, [('document_event_ids','=',inv.id),('type','=','0')], context=context))
-
             send_event  = event_obj.browse(cr, uid, [event])[0]
-
             arquivo = send_event.file_sent
+            nfe_obj = self._get_nfe_factory(inv.nfe_version)
 
-            # if company.nfe_version == '3.10':
-            #     nfe_obj = NFe310()
-            #
-            # elif company.nfe_version == '2.00':
-            #     nfe_obj = NFe200()
-
-            nfe_obj = self._get_nfe_factory(company)
-
-            #TODO: altear versão
-            # nfe_obj = NFe310()
             nfe = []
             results = []
             protNFe = {}
@@ -130,36 +128,36 @@ class AccountInvoice(orm.Model):
             protNFe["nfe_protocol_number"] = ''
             try:
                 nfe.append(nfe_obj.set_xml(arquivo))
-
                 for processo in send(company, nfe):
-
                     vals = {
                             'type': str(processo.webservice),
                             'status': processo.resposta.cStat.valor,
                             'response': '',
                             'company_id': company.id,
                             'origin': '[NF-E]' + inv.internal_number,
+                            #TODO: Manipular os arquivos manualmente
                             # 'file_sent': processo.arquivos[0]['arquivo'],
                             # 'file_returned': processo.arquivos[1]['arquivo'],
                             'message': processo.resposta.xMotivo.valor,
                             'state': 'done',
                             'document_event_ids': inv.id}
                     results.append(vals)
-
-                    if processo.webservice == 1:
+                    if processo.webservice == 1:                         
                         for prot in processo.resposta.protNFe:
                             protNFe["status_code"] = prot.infProt.cStat.valor
                             protNFe["nfe_protocol_number"] = prot.infProt.nProt.valor
                             protNFe["message"] = prot.infProt.xMotivo.valor
                             vals["status"] = prot.infProt.cStat.valor
                             vals["message"] = prot.infProt.xMotivo.valor
-                            if prot.infProt.cStat.valor in ('100', '150', '110', '301', '302'):
+                            if prot.infProt.cStat.valor in ('100', '150'):
                                 protNFe["state"] = 'open'
-
+                            elif prot.infProt.cStat.valor in ('110', '301',
+                                                              '302'):
+                                protNFe["state"] = 'sefaz_denied'
                         self.attach_file_event(cr, uid, [inv.id], None, 'nfe', 'xml', context)
                         self.attach_file_event(cr, uid, [inv.id], None, None, 'pdf', context)
-
             except Exception as e:
+                _logger.error(e.message,exc_info=True)
                 vals = {
                         'type': '-1',
                         'status': '000',
@@ -192,10 +190,14 @@ class AccountInvoice(orm.Model):
         
     def cancel_invoice_online(self, cr, uid, ids, justificative, context=None):
         
-        for inv in self.browse(cr, uid, ids, context):           
-            if inv.document_serie_id and inv.document_serie_id.fiscal_document_id \
-               and not inv.document_serie_id.fiscal_document_id.electronic:
-                        return False
+        for inv in self.browse(cr, uid, ids, context):
+
+            document_serie_id = inv.document_serie_id
+            fiscal_document_id = inv.document_serie_id.fiscal_document_id
+            electronic = inv.document_serie_id.fiscal_document_id.electronic
+
+            if (document_serie_id and fiscal_document_id and not electronic):
+                return False
                       
             event_obj = self.pool.get('l10n_br_account.document_event')
             if inv.state in ('open','paid'):
@@ -207,7 +209,6 @@ class AccountInvoice(orm.Model):
             
                 results = []   
                 try:
-                    os.environ['TZ'] = 'America/Sao_Paulo' #FIXME: context.get('tz') ou Colocar o campo tz no cadastro da empresa.                
                     processo = cancel(company, inv.nfe_access_key, inv.nfe_protocol_number, justificative) 
                     vals = {
                                 'type': str(processo.webservice),
@@ -238,7 +239,7 @@ class AccountInvoice(orm.Model):
                                     })                                                   
                     results.append(vals)
                 except Exception as e:
-                    os.environ['TZ'] = 'UTC'
+                    _logger.error(e.message,exc_info=True)
                     vals = {
                             'type': '-1',
                             'status': '000',
@@ -257,5 +258,86 @@ class AccountInvoice(orm.Model):
                         event_obj.create(cr, uid, result)    
              
             elif inv.state in ('sefaz_export','sefaz_exception'):
-                pass #TODO
+                _logger.error(_(u'Invoice in invalid state to cancel online'),exc_info=True)
+                #TODO
         return
+
+    def str_pdf_Danfes(self, cr, uid, ids, context=None):
+
+        str_pdf = ""
+        paths = []
+
+        for inv in self.browse(cr, uid, ids):
+
+            company = self.pool.get('res.company').browse(
+                cr, uid, inv.company_id.id)
+            nfe_key = inv.nfe_access_key
+            procnfe = pysped.nfe.manual_401.ProcNFe_200()
+
+            try:
+                if inv.state in ['open', 'paid', 'sefaz_cancelled']:
+                    file_xml = os.path.join(monta_caminho_nfe(
+                        company, chave_nfe=nfe_key))
+
+                else:
+                    file_xml = os.path.join(os.path.join(
+                        monta_caminho_nfe(company, chave_nfe=nfe_key), 'tmp/'))
+
+                procnfe.xml = os.path.join(file_xml, nfe_key + '-nfe.xml')
+            except:
+                raise orm.except_orm(('Error !'),
+                                     ('Não é possível gerar a Danfe '
+                                      '- Confirme o Documento'))
+
+            danfe = pysped.nfe.processador_nfe.DANFE()
+            danfe.NFe = procnfe.NFe
+            danfe.protNFe = procnfe.protNFe
+            danfe.caminho = "/tmp/"
+            danfe.gerar_danfe()
+            paths.append(danfe.caminho + danfe.NFe.chave + '.pdf')
+
+        output = PdfFileWriter()
+        s = StringIO()
+
+        # merge dos pdf criados
+        for path in paths:
+            pdf = PdfFileReader(file(path, "rb"))
+
+            for i in range(pdf.getNumPages()):
+                output.addPage(pdf.getPage(i))
+
+            output.write(s)
+
+        str_pdf = s.getvalue()
+        s.close()
+
+        return str_pdf
+
+    def invoice_print(self, cr, uid, ids, context=None):
+
+        for inv in self.browse(cr, uid, ids, context):
+
+            document_serie_id = inv.document_serie_id
+            fiscal_document_id = inv.document_serie_id.fiscal_document_id
+            electronic = inv.document_serie_id.fiscal_document_id.electronic
+
+            if (document_serie_id and fiscal_document_id and not electronic):
+                return super(AccountInvoice, self).invoice_print(
+                    cr, uid, ids, context=context)
+
+            assert len(ids) == 1, 'This option should only be ' \
+                                  'used for a single id at a time.'
+
+            self.write(cr, uid, ids, {'sent': True}, context=context)
+            datas = {
+                'ids': ids,
+                'model': 'account.invoice',
+                'form': self.read(cr, uid, ids[0], context=context)
+            }
+
+            return {
+                'type': 'ir.actions.report.xml',
+                'report_name': 'danfe_account_invoice',
+                'datas': datas,
+                'nodestroy': True
+            }
