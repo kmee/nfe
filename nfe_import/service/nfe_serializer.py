@@ -116,10 +116,12 @@ class NFeSerializer(object):
             fiscal_doc_ids[0].id if fiscal_doc_ids else False
 
         res['vendor_serie'] = str(self.nfe.infNFe.ide.serie.valor)
-        res['supplier_invoice_number'] = self.nfe.infNFe.ide.nNF.valor
+        res['internal_number'] = res['supplier_invoice_number'] = (
+            self.nfe.infNFe.ide.nNF.valor
+        )
         res['date_in_out'] = datetime.now()
         res['nfe_purpose'] = str(self.nfe.infNFe.ide.finNFe.valor)
-        res['nfe_access_key'] = self.nfe.infNFe.Id.valor
+        res['nfe_access_key'] = self.nfe.infNFe.Id.valor[3:]
         res['nat_op'] = self.nfe.infNFe.ide.natOp.valor
         res['ind_final'] = self.nfe.infNFe.ide.indFinal.valor
         res['ind_pres'] = self.nfe.infNFe.ide.indPres.valor
@@ -630,6 +632,7 @@ class NFeSerializer(object):
             'cofins_value': self.nfe.infNFe.total.ICMSTot.vCOFINS.valor,
             'amount_costs': self.nfe.infNFe.total.ICMSTot.vOutro.valor,
             'amount_total': self.nfe.infNFe.total.ICMSTot.vNF.valor,
+            'check_total': self.nfe.infNFe.total.ICMSTot.vNF.valor,
         }
         return total
 

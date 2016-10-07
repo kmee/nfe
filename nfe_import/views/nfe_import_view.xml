@@ -29,6 +29,8 @@
 								attrs="{'invisible': [('import_from_invoice', '!=', False)]}" />
 							<field name="product_category_id"
 								attrs="{'invisible': ['|', ('create_product', '=', False), ('import_from_invoice', '!=', False)] }" />
+                            <field name="warehouse_id" />
+							<field name="picking_type_id" />
 						</group>
 					</group>
 					<group>
