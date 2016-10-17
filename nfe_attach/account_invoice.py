@@ -20,6 +20,8 @@
 import os
 import base64
 import commands
+import zipfile
+from openerp import api
 from openerp.osv import osv, orm, fields
 from openerp.tools.translate import _
 from openerp.addons.nfe.sped.nfe.processing.xml import monta_caminho_nfe, \
@@ -186,6 +188,55 @@ class AccountInvoice(orm.Model):
             'context': ctx,
         }
 
+    def mount_zip_nfe(self, cr, uid, ids, context):
+
+        for inv in self.browse(cr, uid, ids):
+            company_pool = self.pool.get('res.company')
+            company = company_pool.browse(cr, uid, inv.company_id.id)
+            nfe_key = inv.nfe_access_key
+
+            save_dir = os.path.join(
+                monta_caminho_nfe(
+                    company,
+                    chave_nfe=nfe_key))
+
+            zip_file = zipfile.ZipFile(save_dir + nfe_key + '.zip', 'w')
+            zip_file.write(nfe_key + '-nfe.xml')
+            zip_file.write(nfe_key + '.pdf')
+            zip_file.close()
+
+        return True
+
+    @api.multi
+    def return_emails_nfe(self):
+        email_receivers = self.env['res.partner'].search(
+            [('parent_id', '=', self.partner_id)]
+        )
+
+        emails = []
+        for partner in email_receivers:
+            if partner.receber_nfe_email:
+                emails.append(partner.email)
+
+        return ','.join(emails)
+
+    # def send_mail(self, cr, uid, ids, context=None):
+    #     email_template_obj = self.pool.get('email.template')
+    #     template_ids = email_template_obj.search(cr, uid, [('model_id.model', '=','your.object.name')], context=context)
+    #     if template_ids:
+    #         values = email_template_obj.generate_email(cr, uid, template_ids[0], ids, context=context)
+    #         values['subject'] = subject
+    #         values['email_to'] = email_to
+    #         values['body_html'] = body_html
+    #         values['body'] = body_html
+    #         values['res_id'] = False
+    #         mail_mail_obj = self.pool.get('mail.mail')
+    #         msg_id = mail_mail_obj.create(cr, uid, values, context=context)
+    #
+    #     if msg_id:
+    #         mail_mail_obj.send(cr, uid, [msg_id], context=context)
+    #
+    #     return True
 
 class email_template(osv.Model):
     _inherit = 'email.template'
@@ -213,4 +264,12 @@ class res_company(osv.Model):
 
     _columns = {
         'nfe_email': fields.text('Observação em Email NFe'),
+    }
+
+
+class res_partner(osv.Model):
+    _inherit = 'res.partner'
+
+    _columns = {
+        'receber_nfe_email': fields.boolean('Receber NFe por Email')
     }

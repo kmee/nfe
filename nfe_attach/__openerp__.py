@@ -33,6 +33,7 @@
     'data': [
         'data/nfe_attach_email.xml',
         'wizard/nfe_xml_periodic_export.xml',
+        'views/res_partner_view.xml',
     ],
     'demo': [],
     'test': [],

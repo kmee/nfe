@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+       <record id="nfe_res_partner_view_buttons" model="ir.ui.view">
+            <field name="name">res.partner.view.buttons</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="base.view_partner_form" />
+            <field name="priority" eval="20"/>
+            <field name="arch" type="xml">
+                <field name="partner_fiscal_type_id" position="after">
+					<field name="receber_nfe_email" />
+				</field>
+            </field>
+        </record>
+    </data>
+</openerp>

@@ -63,6 +63,15 @@ class AccountInvoice(models.Model):
         """
         return False
 
+    @api.multi
+    def mount_zip_nfe(self):
+        """
+        Implemente esse metodo na sua classe de manipulação de arquivos
+        para comprimir o xml e o danfe da nota fiscal em um zip para
+        envio por e-mail
+        """
+        return False
+
     def _get_nfe_factory(self, nfe_version):
         return NfeFactory().get_nfe(nfe_version)
 
@@ -172,6 +181,7 @@ class AccountInvoice(models.Model):
                                 protNFe["state"] = 'sefaz_denied'
                         self.attach_file_event(None, 'nfe', 'xml')
                         self.attach_file_event(None, None, 'pdf')
+                        self.mount_zip_nfe()
             except Exception as e:
                 _logger.error(e.message, exc_info=True)
                 vals = {
@@ -388,6 +398,7 @@ class AccountInvoice(models.Model):
                         protNFe["state"] = 'sefaz_denied'
                     self.attach_file_event(None, 'nfe', 'xml')
                     self.attach_file_event(None, None, 'pdf')
+                    self
             except Exception as e:
                 _logger.error(e.message, exc_info=True)
                 vals = {
