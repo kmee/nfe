@@ -75,7 +75,7 @@ class NfeImportEdit(models.TransientModel):
     product_import_ids = fields.One2many('nfe.import.products',
                                          'nfe_import_id', string="Produtos")
     create_product = fields.Boolean(
-        u'Criar produtos automaticamente?', default=True,
+        u'Criar produtos automaticamente?', default=False,
         help=u'Cria o produto automaticamente caso não seja informado um')
 
     create_suplierinfo = fields.Boolean(
@@ -130,10 +130,12 @@ class NfeImportEdit(models.TransientModel):
     @api.multi
     def confirm_values(self):
         self.ensure_one()
+        ctx = self.env.context.copy()
         inv_values = cPickle.loads(self.xml_data)
 
         for index, item in enumerate(self.product_import_ids):
-            line = inv_values['invoice_line'][index][2]
+            invoice_line = inv_values['invoice_line'][index][2]
+            line = invoice_line
 
             if not item.product_id:
                 if self.create_product:
@@ -180,14 +182,15 @@ class NfeImportEdit(models.TransientModel):
                                 item.product_id.product_tmpl_id.id
                         })
 
-            inv_values['invoice_line'][index][2].update(
+            invoice_line.update(
                 self.fiscal_position.fiscal_position_map(line)
             )
+            invoice_line['name'] = invoice_line['product_name_xml']
 
         self._validate()
 
         invoice = self.save_invoice_values(inv_values)
-        if not self.account_invoice_id:
+        if not self.account_invoice_id and not ctx.get('contract_id'):
             self.create_stock_picking(invoice)
         self.attach_doc_to_invoice(invoice.id, self.edoc_input,
                                    self.file_name)
@@ -204,7 +207,7 @@ class NfeImportEdit(models.TransientModel):
     @api.multi
     def save_invoice_values(self, inv_values):
         self.ensure_one()
-
+        ctx = self.env.context.copy()
         existing_invoice = self.env['account.invoice'].search([
             ('company_id', '=', inv_values['company_id']),
             ('nfe_access_key', '=', inv_values['nfe_access_key']),
@@ -230,7 +233,7 @@ class NfeImportEdit(models.TransientModel):
                         'diferente da que consta no XML fornecido.')
 
             vals = {
-                'vendor_serie': inv_values['vendor_serie'],
+                'serie_nfe': inv_values['vendor_serie'],
                 'fiscal_document_id': inv_values['fiscal_document_id'],
                 'date_hour_invoice': inv_values['date_hour_invoice'],
                 'date_in_out': inv_values['date_in_out'],
@@ -268,6 +271,7 @@ class NfeImportEdit(models.TransientModel):
 
             return self.account_invoice_id
         else:
+            inv_values['serie_nfe'] = inv_values['vendor_serie']
             invoice = self.env['account.invoice'].create(inv_values)
             invoice.button_reset_taxes()
 
@@ -319,7 +323,7 @@ class NfeImportEdit(models.TransientModel):
         picking_vals = {
             'name': '/',
             'origin': 'Fatura: %s-%s' % (invoice.internal_number,
-                                         invoice.vendor_serie),
+                                         invoice.serie_nfe),
             'partner_id': invoice.partner_id.id,
             'invoice_state': 'invoiced',
             'fiscal_category_id': invoice.fiscal_category_id.id,

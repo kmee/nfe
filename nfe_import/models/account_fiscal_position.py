@@ -90,7 +90,7 @@ class AccountFiscalPosition(models.Model):
             )
             tax_code_src_id_match = (
                 tax_mapping.tax_code_src_id.id and
-                tax_mapping.tax_code_src_id.id == values['icms_cst_id']
+                tax_mapping.tax_code_src_id.id == values.get('icms_cst_id')
             )
 
             if cfop_src_id_match and tax_src_id_match \
