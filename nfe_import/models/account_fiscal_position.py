@@ -88,13 +88,10 @@ class AccountFiscalPosition(models.Model):
                     j[1] for j in values['invoice_line_tax_id']
                 }
             )
-            if values.get('icms_cst_id'):
-                tax_code_src_id_match = (
-                    tax_mapping.tax_code_src_id.id and
-                    tax_mapping.tax_code_src_id.id == values['icms_cst_id']
-                )
-            else:
-                tax_code_src_id_match = False
+            tax_code_src_id_match = (
+                tax_mapping.tax_code_src_id.id and
+                tax_mapping.tax_code_src_id.id == values.get('icms_cst_id')
+            )
 
             if cfop_src_id_match and tax_src_id_match \
                     and tax_code_src_id_match:
