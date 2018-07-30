@@ -171,6 +171,20 @@ class AccountInvoice(models.Model):
                                 protNFe["state"] = 'sefaz_denied'
                         self.attach_file_event(None, 'nfe', 'xml')
                         self.attach_file_event(None, None, 'pdf')
+                    elif processo.webservice == 4:
+                        prot = processo.resposta
+                        protNFe["status_code"] = prot.infProt.cStat.valor
+                        protNFe["nfe_protocol_number"] = \
+                            prot.infProt.nProt.valor
+                        protNFe["message"] = prot.infProt.xMotivo.valor
+                        vals["status"] = prot.infProt.cStat.valor
+                        vals["message"] = prot.infProt.xMotivo.valor
+                        if prot.infProt.cStat.valor in ('100', '150'):
+                            protNFe["state"] = 'open'
+                        elif prot.infProt.cStat.valor in ('110', '301', '302'):
+                            protNFe["state"] = 'sefaz_denied'
+                        self.attach_file_event(None, 'nfe', 'xml')
+                        self.attach_file_event(None, None, 'pdf')
             except Exception as e:
                 _logger.error(e.message, exc_info=True)
                 vals = {
@@ -354,9 +368,8 @@ class AccountInvoice(models.Model):
             try:
                 file_xml = monta_caminho_nfe(
                     inv.company_id, inv.nfe_access_key)
-                # if inv.state not in (
-                # 'open', 'paid', 'sefaz_cancelled'):
-                #     file_xml = os.path.join(file_xml, 'tmp/')
+                if inv.state not in ('open', 'paid', 'sefaz_cancelled'):
+                    file_xml = os.path.join(file_xml, 'tmp/')
                 arquivo = os.path.join(
                     file_xml, inv.nfe_access_key + '-nfe.xml')
                 nfe = nfe_obj.set_xml(arquivo)
