@@ -354,9 +354,8 @@ class AccountInvoice(models.Model):
             try:
                 file_xml = monta_caminho_nfe(
                     inv.company_id, inv.nfe_access_key)
-                # if inv.state not in (
-                # 'open', 'paid', 'sefaz_cancelled'):
-                #     file_xml = os.path.join(file_xml, 'tmp/')
+                if inv.state not in ('open', 'paid', 'sefaz_cancelled'):
+                    file_xml = os.path.join(file_xml, 'tmp/')
                 arquivo = os.path.join(
                     file_xml, inv.nfe_access_key + '-nfe.xml')
                 nfe = nfe_obj.set_xml(arquivo)
