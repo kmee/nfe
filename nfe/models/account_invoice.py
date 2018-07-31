@@ -172,7 +172,9 @@ class AccountInvoice(models.Model):
                         self.attach_file_event(None, 'nfe', 'xml')
                         self.attach_file_event(None, None, 'pdf')
                     elif processo.webservice == 4:
-                        prot = processo.resposta
+                        resposta_consulta = check_key_nfe(
+                            inv.company_id, inv.nfe_access_key, nfe[0])
+                        prot = resposta_consulta.resposta.protNFe
                         protNFe["status_code"] = prot.infProt.cStat.valor
                         protNFe["nfe_protocol_number"] = \
                             prot.infProt.nProt.valor
