@@ -143,21 +143,41 @@ class AccountInvoice(models.Model):
             try:
                 nfe.append(nfe_obj.set_xml(arquivo))
                 for processo in send(inv.company_id, nfe):
-                    vals = {
-                        'type': str(processo.webservice),
-                        'status': processo.resposta.cStat.valor,
-                        'response': '',
-                        'company_id': inv.company_id.id,
-                        'origin': '[NF-E]' + inv.internal_number,
-                        # TODO: Manipular os arquivos manualmente
-                        # 'file_sent': processo.arquivos[0]['arquivo'],
-                        # 'file_returned': processo.arquivos[1]['arquivo'],
-                        'message': processo.resposta.xMotivo.valor,
-                        'state': 'done',
-                        'document_event_ids': inv.id}
-                    results.append(vals)
+                    if not processo.resposta.cStat.valor == '217':
+                        vals = {
+                            'type': str(processo.webservice),
+                            'status': processo.resposta.cStat.valor,
+                            'response': '',
+                            'company_id': inv.company_id.id,
+                            'origin': '[NF-E]' + inv.internal_number,
+                            # TODO: Manipular os arquivos manualmente
+                            # 'file_sent': processo.arquivos[0]['arquivo'],
+                            # 'file_returned': processo.arquivos[1]['arquivo'],
+                            'message': processo.resposta.xMotivo.valor,
+                            'state': 'done',
+                            'document_event_ids': inv.id}
+                        results.append(vals)
                     if processo.webservice == 1:
-                        for prot in processo.resposta.protNFe:
+                        if not processo.resposta.cStat.valor == '217':
+                            for prot in processo.resposta.protNFe:
+                                protNFe["status_code"] = prot.infProt.cStat.valor
+                                protNFe["nfe_protocol_number"] = \
+                                    prot.infProt.nProt.valor
+                                protNFe["message"] = prot.infProt.xMotivo.valor
+                                vals["status"] = prot.infProt.cStat.valor
+                                vals["message"] = prot.infProt.xMotivo.valor
+                                if prot.infProt.cStat.valor in ('100', '150'):
+                                    protNFe["state"] = 'open'
+                                elif prot.infProt.cStat.valor in ('110', '301',
+                                                                  '302'):
+                                    protNFe["state"] = 'sefaz_denied'
+                            self.attach_file_event(None, 'nfe', 'xml')
+                            self.attach_file_event(None, None, 'pdf')
+                    elif processo.webservice == 4:
+                        if not processo.resposta.cStat.valor == '217':
+                            resposta_consulta = check_key_nfe(
+                                inv.company_id, inv.nfe_access_key, nfe[0])
+                            prot = resposta_consulta.resposta.protNFe
                             protNFe["status_code"] = prot.infProt.cStat.valor
                             protNFe["nfe_protocol_number"] = \
                                 prot.infProt.nProt.valor
@@ -166,27 +186,10 @@ class AccountInvoice(models.Model):
                             vals["message"] = prot.infProt.xMotivo.valor
                             if prot.infProt.cStat.valor in ('100', '150'):
                                 protNFe["state"] = 'open'
-                            elif prot.infProt.cStat.valor in ('110', '301',
-                                                              '302'):
+                            elif prot.infProt.cStat.valor in ('110', '301', '302'):
                                 protNFe["state"] = 'sefaz_denied'
-                        self.attach_file_event(None, 'nfe', 'xml')
-                        self.attach_file_event(None, None, 'pdf')
-                    elif processo.webservice == 4:
-                        resposta_consulta = check_key_nfe(
-                            inv.company_id, inv.nfe_access_key, nfe[0])
-                        prot = resposta_consulta.resposta.protNFe
-                        protNFe["status_code"] = prot.infProt.cStat.valor
-                        protNFe["nfe_protocol_number"] = \
-                            prot.infProt.nProt.valor
-                        protNFe["message"] = prot.infProt.xMotivo.valor
-                        vals["status"] = prot.infProt.cStat.valor
-                        vals["message"] = prot.infProt.xMotivo.valor
-                        if prot.infProt.cStat.valor in ('100', '150'):
-                            protNFe["state"] = 'open'
-                        elif prot.infProt.cStat.valor in ('110', '301', '302'):
-                            protNFe["state"] = 'sefaz_denied'
-                        self.attach_file_event(None, 'nfe', 'xml')
-                        self.attach_file_event(None, None, 'pdf')
+                            self.attach_file_event(None, 'nfe', 'xml')
+                            self.attach_file_event(None, None, 'pdf')
             except Exception as e:
                 _logger.error(e.message, exc_info=True)
                 vals = {
