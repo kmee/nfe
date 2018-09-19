@@ -320,6 +320,21 @@ class AccountInvoice(models.Model):
                                       'used for a single id at a time.'
 
             self.write({'sent': True})
+
+            anexo_pdf = self.env['ir.attachment'].search([
+                ('res_model', '=', 'account.invoice'),
+                ('res_id', '=', self.id),
+                ('datas_fname', '=', self.nfe_access_key + '.pdf')
+            ])
+
+            if anexo_pdf:
+                return {
+                    'type': 'ir.actions.act_url',
+                    'url': 'web/content/{id}/{name}'.format(
+                        id=anexo_pdf.id, name=anexo_pdf.name
+                    ),
+                    'target': 'new'
+                }
             datas = {
                 'ids': inv.ids,
                 'model': 'account.invoice',
