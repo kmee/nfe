@@ -144,6 +144,7 @@ class NfeImportEdit(models.TransientModel):
 
                     line['product_id'] = product_created.id
                     line['uos_id'] = product_created.uom_id.id
+                    line['name'] = product_created.name
                     line['account_id'] = (
                         product_created.property_account_income.id or
                         product_created.categ_id.
@@ -160,6 +161,7 @@ class NfeImportEdit(models.TransientModel):
 
             else:
                 line['product_id'] = item.product_id.id
+                line['name'] = item.product_id.name
                 line['account_id'] = (
                     item.product_id.property_account_income.id or
                     item.product_id.categ_id.property_account_income_categ.id)
@@ -195,7 +197,7 @@ class NfeImportEdit(models.TransientModel):
         model_obj = self.pool.get('ir.model.data')
         action_obj = self.pool.get('ir.actions.act_window')
         action_id = model_obj.get_object_reference(
-            self._cr, self._uid, 'account', 'action_invoice_tree2')[1]
+            self._cr, self._uid, 'l10n_br_account_product', 'l10n_br_account_product_nfe_action')[1]
         res = action_obj.read(self._cr, self._uid, action_id)
         res['domain'] = res['domain'][:-1] + \
             ",('id', 'in', %s)]" % [invoice.id]
@@ -265,11 +267,15 @@ class NfeImportEdit(models.TransientModel):
                 index += 1
 
             self.account_invoice_id.button_reset_taxes()
+            for line in self.account_invoice_id.invoice_line:
+                line.onchange_fiscal()
 
             return self.account_invoice_id
         else:
             invoice = self.env['account.invoice'].create(inv_values)
             invoice.button_reset_taxes()
+            for line in self.account_invoice_id.invoice_line:
+                line.onchange_fiscal()
 
             return invoice
 
