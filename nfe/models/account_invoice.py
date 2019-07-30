@@ -351,6 +351,10 @@ class AccountInvoice(models.Model):
             protNFe["status_code"] = ''
             protNFe["message"] = ''
             protNFe["nfe_protocol_number"] = ''
+            if inv.state not in (
+                    'open', 'paid', 'sefaz_exception'):
+                raise RedirectWarning(
+                    _(u'A NFe não pode ser consultada em seu estado atual!'))
             try:
                 file_xml = monta_caminho_nfe(
                     inv.company_id, inv.nfe_access_key)
