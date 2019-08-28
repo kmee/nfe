@@ -140,6 +140,7 @@ class NfeImportAccountInvoiceImport(models.TransientModel):
                     'product_xml': inv_line['product_name_xml'],
                     'cfop_id': inv_line['cfop_id'],
                     'cfop_xml': inv_line['cfop_xml'],
+                    'ncm_xml': inv_line['ncm_xml'],
                     'quantity_xml': inv_line['quantity'],
                     'unit_amount_xml': inv_line['price_unit'],
                     'discount_total_xml': inv_line['discount'],

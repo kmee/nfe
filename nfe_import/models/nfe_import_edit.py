@@ -286,10 +286,17 @@ class NfeImportEdit(models.TransientModel):
             self, inv_values, line, item_grid, default_category=None):
         if not line['fiscal_classification_id']:
             fc_env = self.env['account.product.fiscal.classification']
-            ncm = fc_env.search([('name', '=', line['ncm_xml'])], limit=1)
+
+            ncm_line = line['ncm_xml'][4] + '.' + \
+                       line['ncm_xml'][4:6] + '.' + \
+                       line['ncm_xml'][6:8] \
+                if ('.' not in line['ncm_xml']) else line['ncm_xml']
+
+            ncm = fc_env.search([('code', '=', ncm_line)], limit=1)
             if not ncm:
                 ncm = fc_env.create({
-                    'name': line['ncm_xml'],
+                    'name': ncm_line,
+                    'code': ncm_line,
                     'company_id': inv_values['company_id'],
                     'type': 'normal'
                 })
@@ -300,6 +307,7 @@ class NfeImportEdit(models.TransientModel):
             'type': 'product',
             'fiscal_type': 'product',
             'ncm_id': line['fiscal_classification_id'],
+            'fiscal_classification_id': line['fiscal_classification_id'],
             'default_code': line['product_code_xml'],
             'standard_price': line['price_unit'],
         }
@@ -393,6 +401,7 @@ class NfeImportProducts(models.TransientModel):
     product_xml = fields.Char(string="Produto Forn.", size=120, readonly=True)
     uom_xml = fields.Char(string="Un. Medida Forn.", size=10, readonly=True)
     cfop_xml = fields.Char(string="CFOP Forn.", size=10, readonly=True)
+    ncm_xml = fields.Char(string="NCM Forn.", size=10, readonly=True)
 
     quantity_xml = fields.Float(
         string="Quantidade", digits=(18, 4), readonly=True)

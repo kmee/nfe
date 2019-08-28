@@ -71,6 +71,7 @@
                     <field name="product_xml"/>
                     <field name="uom_xml"/>
                     <field name="cfop_xml"/>
+                    <field name="ncm_xml"/>
                     <field name="quantity_xml"/>
                     <field name="unit_amount_xml"/>
                     <field name="discount_total_xml"/>
