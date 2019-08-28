@@ -167,6 +167,8 @@ class NfeImportEdit(models.TransientModel):
                     item.product_id.categ_id.property_account_income_categ.id)
                 line['uos_id'] = item.uom_id.id
                 line['cfop_id'] = item.cfop_id.id
+                if not item.product_id.standard_price:
+                    item.product_id.standard_price = line['price_unit']
 
                 if self.create_suplierinfo:
                     total_recs = self.env['product.supplierinfo'].search_count(
@@ -299,6 +301,7 @@ class NfeImportEdit(models.TransientModel):
             'fiscal_type': 'product',
             'ncm_id': line['fiscal_classification_id'],
             'default_code': line['product_code_xml'],
+            'standard_price': line['price_unit'],
         }
 
         if default_category:
