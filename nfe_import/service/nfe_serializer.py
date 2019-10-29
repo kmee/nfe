@@ -134,7 +134,7 @@ class NFeSerializer(object):
         res['date_hour_invoice'] = self.nfe.infNFe.ide.dhEmi.valor
         res['date_invoice'] = res['date_hour_invoice'].strftime(
             tools.DEFAULT_SERVER_DATE_FORMAT)
-        res['nfe_version'] = '3.10'
+        res['nfe_version'] = '4.00'
         res['type'] = 'in_invoice'  # Fixo por hora - apenas nota de entrada
         return res
 
@@ -659,13 +659,13 @@ class NFeSerializer(object):
     def get_NFe(self):
 
         try:
-            from pysped.nfe.leiaute import NFe_310
+            from pysped.nfe.leiaute import NFe_400
         except ImportError:
             raise UserError(
                 _(u'Erro!'),
                 _(u"Biblioteca PySPED não instalada!"))
 
-        return NFe_310()
+        return NFe_400()
 
     def _get_NFRef(self):
 
