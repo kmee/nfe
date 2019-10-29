@@ -354,9 +354,11 @@ class NFeSerializer(object):
         inv_line['product_name_xml'] = self.det.prod.xProd.valor
 
         ncm = self.det.prod.NCM.valor
-        ncm = ncm[:4] + '.' + ncm[4:6] + '.' + ncm[6:]
+        if '.' not in ncm:
+            ncm = ncm[:4] + '.' + ncm[4:6] + '.' + ncm[6:]
+
         fc_id = self.env['account.product.fiscal.classification'].search(
-            [('name', '=', ncm)]
+            [('code', '=', ncm)]
         )
 
         inv_line['fiscal_classification_id'] = fc_id[0].id if len(fc_id) > 0 \
