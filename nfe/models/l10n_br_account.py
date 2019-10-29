@@ -103,7 +103,7 @@ class L10n_brAccountInvoiceInvalidNumber(models.Model):
                                                        str(item.number_end)),
                     'message': processo.resposta.infInut.xMotivo.valor,
                     'state': 'done',
-                    # 'document_event_ids': item.id} TODO: Fix me!
+                    'invalid_number_document_event_id': item.id
                 }
                 results.append(vals)
 
@@ -120,7 +120,7 @@ class L10n_brAccountInvoiceInvalidNumber(models.Model):
                     'file_returned': 'False',
                     'message': 'Erro desconhecido ' + e.message,
                     'state': 'done',
-                    # 'document_event_ids': item.id TODO: Fix me!
+                    'invalid_number_document_event_id': item.id
                 }
                 results.append(vals)
             finally:
