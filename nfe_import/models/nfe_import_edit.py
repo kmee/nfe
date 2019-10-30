@@ -134,6 +134,7 @@ class NfeImportEdit(models.TransientModel):
 
         for index, item in enumerate(self.product_import_ids):
             line = inv_values['invoice_line'][index][2]
+            line['cfop_fornecedor'] = line['cfop_xml']
 
             if not item.product_id:
                 if self.create_product:

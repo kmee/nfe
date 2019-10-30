@@ -10,5 +10,28 @@
                     view_mode="form" target="new" view_type="form"
                     context="{'default_account_invoice_id': active_id}"/>
 
+        <record id="nfe_import_account_invoice_line_form_view" model="ir.ui.view">
+            <field name="name">nfe.import.account.invoice.line.form.view</field>
+            <field name="model">account.invoice.line</field>
+            <field name="inherit_id" ref="l10n_br_account_product.l10n_br_account_product_nfe_line_form"/>
+            <field name="arch" type="xml">
+                <field name="cfop_id" position="after">
+                    <field name="cfop_fornecedor" attrs="{'invisible': [('cfop_fornecedor', '=', False)]}"/>
+                </field>
+                <group string="Substituição Tributária ICMS" position="after">
+                    <group string="ICMS Efetivo" attrs="{'invisible': [('icms_efetivo_value', '=', 0.0)]}">
+                        <group>
+                            <field name="icms_efetivo_bc"/>
+                            <field name="icms_efetivo_perc_reduction"/>
+                        </group>
+                        <group>
+                            <field name="icms_efetivo_percent"/>
+                            <field name="icms_efetivo_value"/>
+                        </group>
+                    </group>
+                </group>
+            </field>
+        </record>
+
     </data>
 </openerp>

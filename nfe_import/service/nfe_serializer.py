@@ -434,6 +434,17 @@ class NFeSerializer(object):
             inv_line['icms_st_percent'] = self.det.imposto.ICMS.pICMSST.valor
             inv_line['icms_st_value'] = self.det.imposto.ICMS.vICMSST.valor
 
+            #ICMS Efetivo
+            if hasattr(self.det.imposto.ICMS, 'vICMSEfet'):
+                inv_line['icms_efetivo_value'] =\
+                    self.det.imposto.ICMS.vICMSEfet.valor
+                inv_line['icms_efetivo_bc'] =\
+                    self.det.imposto.ICMS.vBCEfet.valor
+                inv_line['icms_efetivo_perc_reduction'] =\
+                    self.det.imposto.ICMS.pRedBCEfet.valor
+                inv_line['icms_efetivo_percent'] =\
+                    self.det.imposto.ICMS.pICMSEfet.valor
+
             #
             # # IPI
             #
