@@ -127,7 +127,11 @@ class AccountFiscalPosition(models.Model):
 class AccountFiscalPositionTax(models.Model):
     _inherit = 'account.fiscal.position.tax'
 
-    type = fields.Selection(related='position_id.type', string="Tipo")
+    type = fields.Selection(
+        related='position_id.type',
+        string="Tipo",
+        readonly=True
+    )
 
     cfop_src_id = fields.Many2one(
         'l10n_br_account_product.cfop',
