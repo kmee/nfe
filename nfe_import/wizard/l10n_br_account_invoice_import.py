@@ -25,6 +25,8 @@
 import cPickle
 import logging
 import os
+from datetime import datetime
+import pytz
 
 from openerp import models, fields, api
 from openerp.addons.nfe.sped.nfe.nfe_factory import NfeFactory
@@ -122,6 +124,10 @@ class NfeImportAccountInvoiceImport(models.TransientModel):
             inv_values['fiscal_category_id'] = fiscal_category.id
             inv_values['fiscal_position'] = self.fiscal_position.id
             inv_values['journal_id'] = fiscal_category.property_journal.id
+            dt = datetime.strptime(inv_values['date_invoice'], "%Y-%m-%d").date()
+            active_tz = pytz.timezone(self._context.get("tz", "UTC") if self._context else "UTC")
+            inv_values['date_in_out'] = datetime.combine(dt, datetime.min.time()).replace(
+                tzinfo=active_tz).astimezone(pytz.utc)
 
             product_import_ids = []
 
@@ -144,13 +150,14 @@ class NfeImportAccountInvoiceImport(models.TransientModel):
                     'quantity_xml': inv_line['quantity'],
                     'unit_amount_xml': inv_line['price_unit'],
                     'discount_total_xml': inv_line['discount'],
-                    'total_amount_xml': inv_line['price_gross']
+                    'total_amount_xml': inv_line['price_gross'],
+                    'date_in_out': inv_line['price_gross'],
                 }
 
                 if self.account_invoice_id:
                     line = self.account_invoice_id.invoice_line.filtered(
                         lambda x: x.product_id.id == inv_vals['product_id'] and
-                        x.quantity == inv_vals['quantity_xml'])
+                                  x.quantity == inv_vals['quantity_xml'])
                     inv_vals['invoice_line_id'] = line.id
 
                 product_import_ids.append((0, 0, inv_vals))
