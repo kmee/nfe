@@ -298,7 +298,7 @@ class NfeImportEdit(models.TransientModel):
                 ncm = fc_env.create({
                     'name': ncm_line,
                     'code': ncm_line,
-                    'company_id': inv_values['company_id'],
+                    # 'company_id': inv_values['company_id'],
                     'type': 'normal'
                 })
             line['fiscal_classification_id'] = ncm.id
@@ -311,6 +311,7 @@ class NfeImportEdit(models.TransientModel):
             'fiscal_classification_id': line['fiscal_classification_id'],
             'default_code': line['product_code_xml'],
             'standard_price': line['price_unit'],
+            'company_id': False,
         }
 
         if default_category:
